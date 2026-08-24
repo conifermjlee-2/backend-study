@@ -1,18 +1,15 @@
 # 01. 스프링 글로벌 예외 처리 (Global Exception Handling) & Optional
 
-> **학습 목표:**
-> 1. 왜 `try-catch` 대신 `orElseThrow()` + `@RestControllerAdvice`를 사용하는지 이해한다.
-> 2. 스프링이 예외를 가로채서 처리하는 내부 흐름(DispatcherServlet ➔ HandlerExceptionResolver)을 이해한다.
-> 3. `orElseThrow()` vs `orElse()` / `ifPresent()`의 적절한 사용 기준을 익힌다.
+> **💡 메인 학습 목표:**
+> 1. 왜 서비스 로직마다 `try-catch`를 쓰지 않고 `orElseThrow()` + `@RestControllerAdvice`를 사용하는지 전체 아키텍처 흐름을 이해한다.
+> 2. `Optional` ➔ `ErrorCode & CustomException(RuntimeException)` ➔ `ErrorResponse` ➔ `@RestControllerAdvice`로 이어지는 실무 예외 처리 파이프라인을 체화한다.
+> 3. **Checked Exception vs RuntimeException**의 실무적 차이와, **DTO / VO / Entity / Record**의 역할 구분을 명확히 정립한다.
 
 ---
 
-## 1. 한눈에 보는 핵심 개념
+## 🏛️ 1. 스프링 글로벌 예외 처리 내부 동작 흐름
 
-### ① 예외 전파와 글로벌 예외 처리
-- **일반 Java (main):** 예외를 catch하지 않으면 프로그램이 비정상 종료(Crash)됨.
-- **Spring Boot:** Service나 Controller에서 `try-catch`를 하지 않고 던진 예외(`throw`)는 최상단의 **`DispatcherServlet`**까지 전파됨.
-- **`@RestControllerAdvice`:** 스프링이 시작될 때 `@ExceptionHandler` 메서드들을 스캔하여 예외 처리 지도를 만들어 두고, 발생한 예외에 맞는 메서드를 실행하여 **클라이언트에게 표준화된 JSON 에러 응답(400, 404, 500 등)**을 반환함.
+스프링 부트 환경에서 Service나 Controller가 예외를 `try-catch`로 잡지 않고 던지면(`throw`), 예외는 자기를 호출한 상위 계층으로 자동 패스(전파/버블링)되어 최상단의 **`DispatcherServlet`**을 거쳐 `@RestControllerAdvice`로 등록된 핸들러에게 전달됩니다.
 
 ```
 [클라이언트 요청]
@@ -24,39 +21,21 @@
 2. Controller
        │
        ▼
-3. Service (비즈니스 로직) ───▶ orElseThrow()로 예외 던짐! (try-catch 필요 없음)
+3. Service (비즈니스 로직) ───▶ orElseThrow()로 CustomException 던짐! (try-catch 불필요)
                                       │
-                                      ▼ (예외가 상위로 전파)
-1. DispatcherServlet (스프링이 가로챔)
+                                      ▼ (예외가 상위로 자동 전파/토스)
+1. DispatcherServlet (스프링이 예외를 가로챔)
        │
        ▼
-4. @RestControllerAdvice (GlobalExceptionHandler)가 실행됨
+4. @RestControllerAdvice (GlobalExceptionHandler) ──▶ 🎣 "잡았다!"
        │
        ▼
-[클라이언트에게 정돈된 JSON 응답 반환: 400/404 ErrorResponse]
+[클라이언트에게 정돈된 JSON 응답 반환: 400/404/409 ErrorResponse]
 ```
 
 ---
 
-## 2. Optional 핵심 메서드 선택 기준 & 비교표
-
-| 메서드 | 언제 사용하는가? | 동작 방식 | 실무 예시 |
-| :--- | :--- | :--- | :--- |
-| **`orElseThrow()`** | **데이터가 없으면 진행 불가(에러 발생)** | 비어있으면 즉시 예외(`Exception`)를 던지고 중단 | `userRepository.findById(id).orElseThrow(...)` |
-| **`orElse(기본값)`** | **데이터가 없어도 정상 흐름이며 고정 기본값 사용** | 비어있으면 대체 기본값 반환 | `.orElse("손님")` (단순 상수/문자열) |
-| **`orElseGet(Supplier)`** | **기본값 생성에 비용(DB조회/객체생성)이 들 때** | 비어있을 때만 지연(Lazy) 실행하여 기본값 생성 | `.orElseGet(() -> createDefaultUser())` |
-| **`map(Function)`** | **객체 내부의 특정 필드/값을 안전하게 가공할 때** | 값이 있을 때만 가공 실행 (NPE 원천 차단) | `.map(email -> email.split("@")[0])` |
-| **`filter(Predicate)`** | **조건에 맞지 않는 데이터를 걸러낼 때** | 조건을 만족하지 못하면 빈 Optional로 변환 | `.filter(age -> age >= 19)` |
-| **`ifPresent(동작)`** | **값이 있을 때만 어떤 액션을 취하고, 없으면 무시** | 값이 있을 때만 Consumer 실행 | `.ifPresent(id -> log.info("접속: " + id))` |
-| **`ifPresentOrElse(동작A, 동작B)`** | **있을 때와 없을 때의 행동을 분기 처리할 때** | 있을 때는 A(Consumer), 없을 때는 B(Runnable) 실행 | 회원 존재 시 업데이트, 없으면 신규 가입 안내 |
-
-> ⚠️ **[중요] `orElse()` vs `orElseGet()` 차이점**
-> * `orElse(메서드호출())` : Optional에 값이 **이미 존재해도** 인자 안의 `메서드호출()`이 무조건 실행됩니다. (불필요한 리소스 낭비 위험)
-> * `orElseGet(() -> 메서드호출())` : Optional이 **비어있을 때만** 람다가 실행되어 안전합니다. (실무 권장)
-
----
-
-## 3. 코드 패턴 비교
+## ⚖️ 2. 코드 패턴 비교: Before & After
 
 ### ❌ 안 좋은 패턴: 모든 곳에 try-catch 남용 & get() 직접 호출
 ```java
@@ -65,85 +44,69 @@ try {
     User user = userRepository.findById(id).get(); // get() 직접 호출 시 NoSuchElementException 위험!
     user.changeName(name);
 } catch (NoSuchElementException e) {
-    // 여기서 안 멈추고 넘어가면 2차 버그 발생
+    // 적절히 처리하지 못하고 넘어가면 2차 장애 발생
 }
 ```
 
 ### ⭕ 권장 패턴: 깔끔한 Optional 체이닝 + 글로벌 핸들러
 ```java
-// [1] 서비스 레이어 : 비즈니스 로직에만 집중
+// [1] 서비스 레이어 : 비즈니스 로직에만 집중 (예외는 던지기만 함)
 @Service
 public class UserService {
     public void updateUser(Long id, String name) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
-        user.changeName(name);
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        user.changeName(name); // 이 줄부터는 user가 무조건 존재함을 보장받음!
     }
 }
 
-// [2] 글로벌 핸들러 : 예외 처리를 한 곳에서 모아서 관리
+// [2] 글로벌 핸들러 : 예외 처리를 한곳에서 모아서 관리
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> handleBadRequest(IllegalArgumentException e, HttpServletRequest req) {
-        ErrorResponse response = ErrorResponse.of(400, "BAD_REQUEST", e.getMessage(), req.getRequestURI());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    @ExceptionHandler(CustomException.class)
+    public ResponseEntity<ErrorResponse> handleCustomException(CustomException e, HttpServletRequest req) {
+        ErrorCode code = e.getErrorCode();
+        ErrorResponse response = ErrorResponse.of(code.getStatus(), code.getCode(), e.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(code.getStatus()).body(response);
     }
 }
 ```
 
 ---
 
-## 4. 단계별 실습 로드맵 (Practice Series)
+## 🧠 3. 핵심 아키텍처 & 실무 문답 (Deep Dive)
 
-아래 순서대로 실습 클래스를 작성하고 완성해 나가면 스프링 글로벌 예외 처리 구조를 100% 마스터할 수 있습니다.
+### Q1. 왜 `CustomException`은 그냥 `Exception`이 아니라 `RuntimeException`을 상속받을까?
+1. **스프링 트랜잭션(`@Transactional`)의 자동 롤백**: 스프링은 기본적으로 **`RuntimeException`(언체크 예외)이 발생했을 때만 DB를 자동 롤백**합니다.
+2. **`throws` 지옥(코드 오염) 방지**: 체크 예외(`Exception`)를 쓰면 모든 메서드에 `throws CustomException`을 줄줄이 붙여야 합니다.
+3. **`Optional`의 한 줄 체이닝 유지**: Optional을 만든 목적이 코드 다이어트인데, `orElseThrow`에서 체크 예외를 던지면 또 `try-catch`로 감싸야 하므로 Optional의 존재 이유가 사라집니다.
 
-```
-📁 01_global_exception
- ├── 📄 Practice01.java  ──▶ [완료] Optional 핵심 메서드 정복 (orElse, orElseThrow, map, filter, ifPresent, ifPresentOrElse)
- ├── 📄 Practice02.java  ──▶ [예정] ErrorCode(Enum) & CustomException(비즈니스 예외) 설계
- ├── 📄 Practice03.java  ──▶ [예정] 일관된 JSON 에러 응답 객체 (ErrorResponse DTO) 설계
- └── 📄 Practice04.java  ──▶ [예정] @RestControllerAdvice 글로벌 예외 핸들러 실전 완성
-```
+### Q2. 컴파일러가 에러를 잡는 것과 런타임 에러의 분업 구조는?
+* **컴파일러의 핵심 무기 (타입 검사 / 문법 검사)**: 오타, `int`에 `String` 넣는 실수, 메서드명 불일치 등 멍청한 실수를 100% 잡아냅니다. (자바의 생명줄!)
+* **런타임 예외의 영역 (비즈니스 상황 처리)**: "잔액 부족", "유저 없음" 등은 코드를 실제로 돌려봐야 알 수 있으므로, `RuntimeException`으로 던져 `@RestControllerAdvice`에서 우아하게 처리합니다.
 
-### 📌 Practice 01. `Optional` 핵심 메서드 정복 (완료)
-* **목표:** NPE(NullPointerException)를 방지하고, 상황에 맞는 함수형 메서드를 선택하는 역량 습득.
-* **완성된 핵심 실습 패턴:**
-  1. `orElse("손님")` : 데이터가 없을 때 기본 문자열 대체.
-  2. `orElseThrow(() -> new IllegalArgumentException(...))` : 필수 데이터 부재 시 비즈니스 예외 발생.
-  3. `map(email -> email.split("@")[0])` : Null-Safe하게 이메일 아이디 추출 및 가공.
-  4. `filter(age -> age >= 19)` : 19세 이상 조건 검증 후 미달 시 예외로 연결.
-  5. `ifPresent(id -> ...)` : 존재할 때만 실행하고 없을 때는 무시.
-  6. `ifPresentOrElse(존재할때동작, 없을때동작)` : 존재 여부에 따른 깔끔한 2-way 분기 처리.
+### Q3. DTO, VO, Entity, Record는 어떻게 구분해서 쓰나요?
+
+| 구분 | 역할 | 특징 | `record` 사용 여부 |
+| :--- | :--- | :--- | :---: |
+| **VO** *(Value Object)* | 값 그 자체를 표현 (주소, 금액 등) | 식별자(ID) 없음, **수정 불가(불변)** | **무조건 추천 (100% 찰떡)** |
+| **DTO** *(Data Transfer)* | 계층 간 데이터 전달 바구니 (Request/Response) | 비즈니스 로직 없음, 데이터 전달용 | **적극 추천 (요즘 대세)** |
+| **Entity** *(엔티티)* | DB 테이블과 1:1 매핑되는 주인공 | `@Id` 식별자 필수, DB와 직결 | **절대 금지 ❌** (JPA 프록시/더티체킹 불가) |
 
 ---
 
-### 📌 Practice 02. `ErrorCode` Enum & `CustomException` 설계 (다음 단계)
-* **목표:** 표준 예외(`IllegalArgumentException` 등)의 한계를 극복하고, 서비스 전용 비즈니스 예외 체계 구축.
-* **학습 내용:**
-  * 왜 표준 예외만 쓰면 부족할까? (도메인별 구체적인 에러 코드와 상태 분기 필요)
-  * `ErrorCode` Enum 설계: `HttpStatus`, `code` (예: `USER_NOT_FOUND`), `message` 포함
-  * `CustomException` (또는 `BusinessException`) 구현: `RuntimeException` 상속
+## 🗺️ 4. 단계별 실습 목차 (Practice Series)
+
+| 번호 | 실습 주제 | 실습 코드 | 상세 가이드 (README) | 진행 상태 |
+| :---: | :--- | :---: | :---: | :---: |
+| **01** | **Optional 핵심 메서드 정복**<br>(`orElse`, `orElseThrow`, `map`, `filter`, `ifPresent`) | [`Practice01.java`](./Practice01.java) | [`README_PRACTICE01.md`](./README_PRACTICE01.md) | ✅ 완료 |
+| **02** | **ErrorCode(Enum) & CustomException 설계**<br>(도메인 에러코드, RuntimeException 상속, filter 연계) | [`Practice02.java`](./Practice02.java) | [`README_PRACTICE02.md`](./README_PRACTICE02.md) | ✅ 완료 |
+| **03** | **표준 JSON 에러 응답 객체 (ErrorResponse DTO)**<br>(timestamp, status, code, message, path 규격화) | `Practice03.java` *(예정)* | `README_PRACTICE03.md` *(예정)* | ⏳ 예정 |
+| **04** | **@RestControllerAdvice 글로벌 핸들러 완성**<br>(CustomException, @Valid 에러, 500 방어) | `Practice04.java` *(예정)* | `README_PRACTICE04.md` *(예정)* | ⏳ 예정 |
 
 ---
 
-### 📌 Practice 03. 표준 에러 응답 객체 (`ErrorResponse` DTO)
-* **목표:** 프론트엔드/클라이언트와 소통할 일관된 규격의 JSON 응답 포맷 정의.
-* **포함 필드:**
-  * `timestamp` : 에러 발생 시각
-  * `status` : HTTP 상태 코드 (400, 404, 500 등)
-  * `code` : 비즈니스 에러 코드 (예: `U001`, `INVALID_INPUT_VALUE`)
-  * `message` : 사용자 친화적 에러 메시지
-  * `path` : 요청 경로 (`/api/users/123`)
-
----
-
-### 📌 Practice 04. `@RestControllerAdvice` 글로벌 예외 핸들러 완성
-* **목표:** 서비스 전역에서 던져진 예외를 가로채서 `ErrorResponse`로 변환해주는 총괄 컨트롤러 구현.
-* **처리 대상 예외:**
-  1. `CustomException` : 비즈니스 로직 상의 의도된 예외 (400, 404 등)
-  2. `MethodArgumentNotValidException` : DTO 유효성 검사(`@Valid`) 실패 예외
-  3. `Exception` : 미처 예상하지 못한 서버 내부 오류 (500 Internal Server Error) 로깅 및 방어
-
-
+## 📚 추가 참고 자료
+- [`OptionalAndExceptionExample.java`](./OptionalAndExceptionExample.java) : Optional 대체값/예외 처리 단독 실행 예제
+- [`NOTION.md`](./NOTION.md) : 실습 요약 및 실무 Q&A 노트

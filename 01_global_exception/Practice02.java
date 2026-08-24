@@ -37,6 +37,7 @@ public class Practice02 {
         public String getMessage() { return message; }
     }
 
+
     // =========================================================================
     // 2. 비즈니스 커스텀 예외 클래스 (CustomException)
     // =========================================================================
@@ -68,11 +69,15 @@ public class Practice02 {
             // TODO 1: findUser("user99")를 호출하고, 유저가 없으면
             //         CustomException(ErrorCode.USER_NOT_FOUND)을 던지도록 완성해보세요.
             // String user = findUser("user99").orElseThrow(...);
+            String user = findUser("user99")
+                    .orElseThrow( () -> new CustomException(ErrorCode.USER_NOT_FOUND) );
             
         } catch (CustomException e) {
             System.out.println("-> [가로챔] 에러코드: " + e.getErrorCode().getCode()
                     + " | HTTP 상태: " + e.getErrorCode().getStatus()
                     + " | 메시지: " + e.getMessage());
+
+            System.out.println("에러코드 : " + e.getErrorCode());
         }
 
 

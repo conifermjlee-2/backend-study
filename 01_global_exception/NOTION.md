@@ -58,11 +58,36 @@
 * 인텔리제이의 **Task Tag(작업 태그)** 기능입니다.
 * `Alt + 6` 단축키를 누르면 프로젝트 전체의 `TODO`, `FIXME` 주석을 한눈에 모아서 체크리스트로 관리할 수 있습니다.
 
+### Q5. 왜 비즈니스 예외(CustomException)는 무조건 `RuntimeException`을 상속받을까?
+1. **스프링 트랜잭션(`@Transactional`)의 기본 규칙:** 스프링은 `RuntimeException`(언체크 예외)이 터져야만 DB를 자동으로 롤백합니다.
+2. **`throws` 지옥 탈출:** 체크 예외를 쓰면 서비스/컨트롤러마다 `throws`를 도배해야 하므로 코드가 지저분해집니다.
+3. **`Optional.orElseThrow()`와의 찰떡궁합:** Optional을 쓰는 이유가 코드를 깔끔하게 한 줄로 줄이기 위함인데, 체크 예외를 던지면 또 `try-catch`로 감싸야 해서 본래 목적이 퇴색됩니다.
+
+### Q6. DTO, VO, Entity, Record의 명확한 사용 기준은?
+* **VO (Value Object):** 수정 불가능한 순수 값 객체 ➡️ **무조건 `record` 추천 (100%)**
+* **DTO (Data Transfer Object):** 계층 간 데이터 전달용 택배 상자 ➡️ **`record` 적극 추천 (현대 대세)**
+* **Entity:** DB 테이블과 매핑되는 고유 ID(`@Id`) 달린 객체 ➡️ **절대 `record` 불가 ❌** (JPA 프록시/더티체킹 불가)
+
+### Q7. 서비스에서 `try-catch` 안 해도 어떻게 예외 처리가 될까? (예외 전파와 `@RestControllerAdvice`)
+* 예외를 안 잡으면 **자기를 호출한 상위 계층으로 자동 토스(전파/버블링)**됩니다.
+* `Repository` ➡️ `Service` ➡️ `Controller` ➡️ **`DispatcherServlet`** ➡️ **`@RestControllerAdvice` (최종 낚시꾼)**
+* 결국 최상단에 있는 글로벌 핸들러가 딱 낚아채서 400/404 JSON 에러 응답을 클라이언트에게 돌려줍니다.
+
+### Q8. `new CustomException(ErrorCode.USER_NOT_FOUND)` 호출 시 데이터가 어떻게 전달되고 꺼내지나요?
+* `super(errorCode.getMessage())`를 통해 부모인 `RuntimeException`에 기본 메시지가 전달되므로 `e.getMessage()`로 메시지를 꺼낼 수 있습니다.
+* 동시에 `this.errorCode = errorCode`로 `ErrorCode` Enum 객체 자체를 필드로 저장하므로:
+  - `e.getErrorCode().getStatus()` ➔ `404` (HTTP 상태 코드)
+  - `e.getErrorCode().getCode()` ➔ `"USER_001"` (클라이언트 협의 에러 코드)
+  - `e.getErrorCode().getMessage()` ➔ `"존재하지 않는 회원입니다."`
+  - `e.getErrorCode()` ➔ `USER_NOT_FOUND` (Enum 상수 이름)
+* 이 세팅 덕분에 스프링의 `@RestControllerAdvice`에서 HTTP 응답 상태값과 JSON 에러 코드를 완벽하게 동적으로 제어할 수 있습니다.
+
 ---
 
-## 4. 💻 실전 연습 코드 (`Practice01.java` 핵심 정리)
+## 4. 💻 실전 연습 코드 (`Practice01.java` & `Practice02.java`)
 
 ```java
+// === [Practice 01] Optional 기본 메서드 ===
 // 1. orElse: 기본값 대체
 String nickname = getNickname().orElse("손님");
 
@@ -77,14 +102,22 @@ Integer age = findUserAge()
         .filter(chkAge -> chkAge >= 19)
         .orElseThrow(() -> new IllegalStateException("19세 미만은 접근 불가합니다."));
 
-// 5. ifPresentOrElse: 2-way 분기 처리
-findLoginId().ifPresentOrElse(
-        id -> System.out.println("로그인 성공: " + id),
-        () -> System.out.println("로그인 실패: 세션 만료")
-);
 
-// 6. ifPresent: 있을 때만 동작
-findLoginId().ifPresent(id -> System.out.println("일반 ID: " + id));
+// === [Practice 02] ErrorCode Enum & CustomException ===
+// 1. 유저 조회 실패 시 비즈니스 예외 발생
+String user = findUser("user99")
+        .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+// 2. 이메일 중복 시 비즈니스 예외 발생
+if (isEmailExist("test@kakao.com")) {
+    throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
+}
+
+// 3. 출금 잔액 검증 (filter + orElseThrow)
+int withdrawAmount = 10000;
+int currentBalance = findAccountBalance()
+        .filter(balance -> balance >= withdrawAmount)
+        .orElseThrow(() -> new CustomException(ErrorCode.INSUFFICIENT_BALANCE));
 ```
 
 ---
@@ -92,6 +125,6 @@ findLoginId().ifPresent(id -> System.out.println("일반 ID: " + id));
 ## 5. 🗺️ 다음 실습 로드맵 (Roadmap)
 
 - [x] **Practice 01:** `Optional` 핵심 메서드 정복 (`orElse`, `orElseThrow`, `map`, `filter`, `ifPresent`, `ifPresentOrElse`)
-- [ ] **Practice 02:** `ErrorCode` Enum & `CustomException` 비즈니스 예외 설계
+- [x] **Practice 02:** `ErrorCode` Enum & `CustomException` 비즈니스 예외 설계
 - [ ] **Practice 03:** 표준 JSON 에러 응답 규격 (`ErrorResponse` DTO) 설계
 - [ ] **Practice 04:** `@RestControllerAdvice` & `@ExceptionHandler` 실전 글로벌 핸들러 완성
