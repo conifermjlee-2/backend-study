@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 /**
  * [Practice 02] 실무형 엔티티 매핑
@@ -23,29 +24,40 @@ import java.time.LocalDateTime;
  */
 // TODO 1: @Entity 및 @Table(name = "items") 어노테이션을 선언하세요.
 @Entity
+@Table(name = "items")
 @Getter
 // TODO 2: Lombok을 사용해 protected 접근 제어자를 가진 기본 생성자를 만드세요. (@NoArgsConstructor)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Item {
 
     // TODO 3: @Id 와 @GeneratedValue(strategy = GenerationType.IDENTITY)를 설정하세요.
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     // TODO 4: @Column(name = "item_name", nullable = false, length = 100)을 설정하세요.
+    @Column(name = "item_name", nullable = false, length = 100)
     private String name;
 
     // TODO 5: @Column(nullable = false)을 설정하세요.
+    @Column(nullable = false)
     private Integer price;
 
     // TODO 6: @Column(name = "stock_qty", nullable = false)을 설정하세요.
+    @Column(name = "stock_qty", nullable = false)
     private Integer stockQuantity;
 
     // TODO 7: @Enumerated(EnumType.STRING) 및 @Column(name = "status", nullable = false, length = 20)을 설정하세요.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
     private ItemStatus status;
 
     // TODO 8: @Transient 어노테이션을 붙여 DB 컬럼에서 제외시키세요.
+    @Transient
     private Double tempDiscountRate;
 
     // TODO 9: @Column(name = "created_at", nullable = false, updatable = false)을 설정하세요.
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     // 생성자 (비즈니스 생성자)
@@ -55,7 +67,7 @@ public class Item {
         this.stockQuantity = stockQuantity;
         this.status = status;
         this.tempDiscountRate = 0.0;
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now().truncatedTo(ChronoUnit.MICROS);
     }
 
     // == 비즈니스 로직 메서드 (Setter 대신 도메인 메서드 사용) == //

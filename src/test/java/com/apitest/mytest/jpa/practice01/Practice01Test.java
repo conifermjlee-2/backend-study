@@ -42,25 +42,25 @@ class Practice01Test {
         // [TODO 1-1] INSERT: dataSource에서 커넥션을 얻어 member 테이블에 name="raw-jdbc-member", email="raw@jdbc.com"을 insert 하세요.
         try (Connection conn = dataSource.getConnection();
              PreparedStatement insert = conn.prepareStatement(
-                     "/* TODO: insert SQL 작성 */"
+                     "INSERT INTO member (name, email) VALUES (?, ?)"
              )) {
-            // insert.setString(1, ...);
-            // insert.setString(2, ...);
-            // insert.executeUpdate();
+            insert.setString(1, "raw-jdbc-member");
+            insert.setString(2, "raw@jdbc.com");
+            insert.executeUpdate();
         }
 
         // [TODO 1-2] SELECT: email이 "raw@jdbc.com"인 회원의 name을 조회하여 foundName 변수에 담으세요.
         String foundName = null;
         try (Connection conn = dataSource.getConnection();
              PreparedStatement select = conn.prepareStatement(
-                     "/* TODO: select SQL 작성 */"
+                     "SELECT name FROM member WHERE email = ?"
              )) {
-            // select.setString(1, ...);
-            // try (ResultSet rs = select.executeQuery()) {
-            //     if (rs.next()) {
-            //         foundName = rs.getString("name");
-            //     }
-            // }
+            select.setString(1, "raw@jdbc.com");
+            try (ResultSet rs = select.executeQuery()) {
+                if (rs.next()) {
+                    foundName = rs.getString("name");
+                }
+            }
         }
 
         // 검증 (TODO를 완료하면 초록불이 뜹니다!)
@@ -75,13 +75,13 @@ class Practice01Test {
     @Transactional
     void ormWay() {
         // [TODO 2-1] Member 객체를 생성("orm-member", "orm@jpa.com")하고, EntityManager(em)를 사용해 저장하세요.
-        Member member = null; // new Member(...);
-        // em.persist(...);
+        Member member = new Member("orm-member", "orm@jpa.com");
+        em.persist(member);
         
         em.flush(); // 쓰기 지연 저장소의 쿼리를 DB로 즉시 전송 (로그 확인용)
 
         // [TODO 2-2] EntityManager(em)의 find() 메서드를 사용해 방금 저장한 회원을 PK(id)로 조회하세요.
-        Member found = null; // em.find(Member.class, ...);
+        Member found = em.find(Member.class, member.getId());
 
         // 검증 (TODO를 완료하면 초록불이 뜹니다!)
         assertThat(found).isNotNull();
