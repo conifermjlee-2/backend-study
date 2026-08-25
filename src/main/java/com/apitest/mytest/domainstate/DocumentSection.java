@@ -41,13 +41,25 @@ public class DocumentSection {
     private String content;
 
     // TODO 1: 새 섹션 인스턴스를 만들어 반환하세요.
-    //   힌트: new DocumentSection(null, revision, title, content)
+    //
+    // 정답:
+    // public static DocumentSection newInstance(DocumentRevision revision, String title, String content) {
+    //     return new DocumentSection(null, revision, title, content);
+    // }
     public static DocumentSection newInstance(DocumentRevision revision, String title, String content) {
         throw new UnsupportedOperationException("TODO 1");
     }
 
     // TODO 2: revision.isDraft() 가 false 면 IllegalStateException, 통과하면 content 를 변경하세요.
     //   setter 는 만들지 마세요 — 이 메서드가 유일한 변경 경로입니다.
+    //
+    // 정답:
+    // public void updateContent(String newContent) {
+    //     if (!revision.isDraft()) {
+    //         throw new IllegalStateException("DRAFT 상태가 아니면 섹션 내용을 수정할 수 없다");
+    //     }
+    //     this.content = newContent;
+    // }
     public void updateContent(String newContent) {
         throw new UnsupportedOperationException("TODO 2");
     }

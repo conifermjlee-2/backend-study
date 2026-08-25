@@ -1,9 +1,14 @@
 # 📄 [04] 도메인 상태 전이 & Aggregate 경계 — 문제지
 
-> **문제지입니다. 정답 코드는 없습니다.** 실제 목표는 `atworks-lithium`의
+> **문제지입니다.** 실제 목표는 `atworks-lithium`의
 > [`apispec/entity/ApiSpecRevision.java`](../../team-atworks/backend/atworks-lithium/src/main/java/com/apitest/atworks/apispec/entity/ApiSpecRevision.java)
-> 패턴을 미니 도메인으로 직접 재현해보는 것입니다. 다 풀거나 막히면 알려주세요 —
-> `README_PRACTICE01.md`로 정답지 + atworks-lithium 코드와의 비교 해설을 정리해 드립니다.
+> 패턴을 미니 도메인으로 직접 재현해보는 것입니다.
+>
+> `src/main/java/.../domainstate`, `src/test/java/.../domainstate` 파일들을 열면 클래스 뼈대(필드/어노테이션)와
+> 메서드 시그니처는 이미 있고, 각 TODO 바로 아래에 **정답 코드가 주석으로** 적혀 있습니다.
+> 주석을 보고 그대로 따라 타이핑해서 `throw new UnsupportedOperationException(...)` 줄을 실제 코드로 바꾸세요.
+> (정답을 눈으로만 읽지 말고 손으로 직접 치면서 익히는 게 목적입니다.)
+> 다 풀거나 막히면 알려주세요 — `README_PRACTICE01.md`로 atworks-lithium 코드와의 비교 해설을 정리해 드립니다.
 
 ---
 
@@ -67,7 +72,7 @@ atworks-lithium 코드는 거의 모든 엔티티가 두 가지 규칙을 따릅
 
 `ApiSpecRevision`을 참고하되 **복붙하지 말고** 아래 필드/규칙만 보고 직접 구성하세요.
 
-- [ ] 필드: `id`(Long, PK), `documentId`(long — **다른 aggregate에 대한 ID 참조**), `revisionNumber`(long), `status`(DocumentStatus)
+- [v] 필드: `id`(Long, PK), `documentId`(long — **다른 aggregate에 대한 ID 참조**), `revisionNumber`(long), `status`(DocumentStatus)
 - [ ] `sections` 필드: `DocumentSection`의 리스트. **같은 aggregate 내부이므로 객체 연관관계**로 가진다.
       (`@OneToMany(mappedBy = "revision", cascade = CascadeType.ALL, orphanRemoval = true)`)
 - [ ] 기본 생성자 `protected`, 전체 필드 생성자 `private`
