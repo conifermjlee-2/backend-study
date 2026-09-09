@@ -34,5 +34,4 @@ public class DocumentRevision {
    /* - [ ] `sections` 필드: `DocumentSection`의 리스트. **같은 aggregate 내부이므로 객체 연관관계**로 가진다.
    (`@OneToMany(mappedBy = "revision", cascade = CascadeType.ALL, orphanRemoval = true)`)*/
 
-    @OneToMany( mappedBy = "revision", cascade = CascadeType.ALL,  )
 }
