@@ -111,5 +111,5 @@ public class FilteringApples {
       return result;
     };
 
-    
+
 }
