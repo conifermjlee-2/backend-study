@@ -4,7 +4,7 @@ public class Apple {
     private Color color;
     private int weight;
 
-    //기본 생성자
+    //기본 생성자1
     public Apple(){};
 
     //매개변수 생성자
