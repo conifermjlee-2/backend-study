@@ -19,14 +19,14 @@ public class FilteringApples {
         inventory.add(apple_2);
         inventory.add(apple_3);
 
-        List<Apple> greenApples =  filterGreenApples(inventory);
+        List<Apple> greenApples =  filterGreenApples(inventory, Color.GREEN);
         System.out.println("녹색 사과 필터링 결과: " + greenApples);
     }
 
-    public static List<Apple> filterGreenApples (List<Apple> inventory) {
+    public static List<Apple> filterGreenApples (List<Apple> inventory, Color color) {
         List<Apple> result = new ArrayList<>();
         for (Apple apple :  inventory) {
-            if (apple.getColor().equals(Color.GREEN)) {
+            if (apple.getColor().equals(color)) {
                 result.add(apple);
             }
         }
