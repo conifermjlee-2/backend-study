@@ -1,6 +1,7 @@
 package com.apitest.mytest.modern_java.ch02;
 
 import com.apitest.mytest.modern_java.ch02.domain.Apple;
+import com.apitest.mytest.modern_java.ch02.domain.Car;
 import com.apitest.mytest.modern_java.ch02.domain.Color;
 import com.apitest.mytest.modern_java.ch02.predicate.ApplePredicate;
 import com.apitest.mytest.modern_java.ch02.predicate.ApplesGreenPredicate;
@@ -8,16 +9,17 @@ import com.apitest.mytest.modern_java.ch02.predicate.ApplesHeavWeightPredicate;
 import com.apitest.mytest.modern_java.ch02.predicate.Predicate;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public class FilteringApples {
     public static void main(String[] args) {
 
         System.out.println("FilteringApples start");
-        Apple apple_1 = new Apple(Color.RED, 1);
-        Apple apple_2 = new Apple(Color.GREEN, 2);
-        Apple apple_3 = new Apple(Color.GREEN, 3);
-        Apple apple_4 = new Apple(Color.GREEN, 4);
+        Apple apple_1 = new Apple(Color.RED, 4);
+        Apple apple_2 = new Apple(Color.GREEN, 1);
+        Apple apple_3 = new Apple(Color.GREEN, 2);
+        Apple apple_4 = new Apple(Color.GREEN, 3);
 
         List<Apple> inventory = new ArrayList<>();
         inventory.add(apple_1);
@@ -65,6 +67,29 @@ public class FilteringApples {
 
         List<Apple> redApples4 = filterApples_2(inventory, (Apple apple) -> apple.getColor().equals(Color.RED) );
         System.out.println("추상화 인터페이스 필터링 결과: " + redApples4);
+
+        List<Car> cars = new ArrayList<>();
+        cars.add(new Car("BMW",1,10.5));
+        cars.add(new Car("Benz",2,22.5));
+        cars.add(new Car("Audi",3,33.5));
+        List<Car> filterCars_1 = filterCar(cars, (Car car) -> car.getWeight() > 10.6);
+        System.out.println("자동차 인터페이스 필터링 결과: " + filterCars_1);
+
+        System.out.println("before inventory: " + inventory);
+        inventory.sort(new Comparator<Apple>(){
+            @Override
+            public  int compare(Apple o1, Apple o2){
+              return ;
+            };
+        });
+//        inventory.sort(new Comparator<Apple>() {
+//            @Override
+//            public int compare(Apple o1, Apple o2) {
+//                return Integer.compare(o1.getWeight(), o2.getWeight());
+//            }
+//        });
+
+        System.out.println("after inventory: " + inventory);
     }
 
     //색상 필터링
@@ -106,6 +131,16 @@ public class FilteringApples {
       for (Apple apple : inventory) {
           if (p.test(apple)) {
               result.add(apple);
+          }
+      }
+      return result;
+    };
+
+    public static List<Car> filterCar(List<Car> cars, Predicate<Car> p){
+      List<Car> result = new ArrayList<>();
+      for (Car car : cars) {
+          if (p.test(car)) {
+              result.add(car);
           }
       }
       return result;
