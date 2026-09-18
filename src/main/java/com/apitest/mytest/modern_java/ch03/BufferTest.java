@@ -6,14 +6,25 @@ import java.io.IOException;
 
 public class BufferTest {
     public interface BufferedReaderProcessor{
-        String process(BufferedReader br) throws IOException;
+        String process(BufferedReader br);
     }
 
     public static void main(String[] args) {
         System.out.println("BufferTest start");
 //        brMethod();
 //        brMethod( (br) -> br.readLine() );
-        brMethod( BufferedReader::readLine );
+            brMethod( (br) -> {
+                try {
+                    return br.readLine();
+                } catch (IOException e){
+                    System.out.println("IOException : " + e);
+                    return null;
+                }
+            }
+
+        );
+
+
     }
 
     public static void brMethod(BufferedReaderProcessor b) {
