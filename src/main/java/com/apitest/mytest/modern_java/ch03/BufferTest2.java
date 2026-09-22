@@ -16,7 +16,7 @@ public class BufferTest2 {
                 new BrInterFace<BufferedReader>(){
                     @Override
                     public String brProcess(BufferedReader br) throws IOException{
-                        return br.readLine();
+                        return br.readLine() + br.readLine();
                     }
                 }
         );
