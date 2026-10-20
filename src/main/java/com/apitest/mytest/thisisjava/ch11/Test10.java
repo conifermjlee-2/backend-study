@@ -1,4 +1,4 @@
-package com.apitest.mytest.thisisjava.ch10;
+package com.apitest.mytest.thisisjava.ch11;
 
 public class Test10 {
     public static void main(String[] args) {

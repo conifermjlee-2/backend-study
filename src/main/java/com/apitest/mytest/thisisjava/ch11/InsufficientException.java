@@ -1,4 +1,4 @@
-package com.apitest.mytest.thisisjava.ch10;
+package com.apitest.mytest.thisisjava.ch11;
 
 public class InsufficientException extends Exception{
   public InsufficientException (){}

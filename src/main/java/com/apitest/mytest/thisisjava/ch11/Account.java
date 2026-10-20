@@ -1,4 +1,4 @@
-package com.apitest.mytest.thisisjava.ch10;
+package com.apitest.mytest.thisisjava.ch11;
 
 public class Account {
     //기본 생성자 없으면 자동 생성
