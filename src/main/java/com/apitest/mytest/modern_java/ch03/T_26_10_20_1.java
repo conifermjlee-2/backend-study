@@ -31,7 +31,6 @@ public class T_26_10_20_1 {
     public static String method1(BufferedReaderProcessor p){
         System.out.println("method1 start");
         try (BufferedReader br = new BufferedReader(new FileReader("test_sample.txt"));) {
-            System.out.println();
             return p.process(br);
         } catch (Exception e) {
             throw new RuntimeException(e);
