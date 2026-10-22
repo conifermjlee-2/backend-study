@@ -13,8 +13,8 @@ public class PredicateTeest {
     public static void main(String[] args) {
         System.out.println("PredicateTeest");
         List<String> strings = Arrays.asList("모던","","자바","인","","액션");
-        Predicate<String> nonEmptyValue = (String s) -> !s.isEmpty();
-        List<String> filterRes = filter(strings, nonEmptyValue);
+        Predicate<String> nonEmptyStringPredicate = (String s) -> !s.isEmpty();
+        List<String> filterRes = filter(strings, nonEmptyStringPredicate);
         System.out.println("filterRes : " + filterRes);
     }
 
